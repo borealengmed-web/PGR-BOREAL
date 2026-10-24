@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA PGR BOREAL — COLETA DE CAMPO</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Docx & FileSaver CDN for offline Word generation -->
+    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .boreal-header { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); }
+        .signature-canvas { border: 2px dashed #94a3b8; background: #ffffff; cursor: crosshair; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .tab-btn.active { background-color: #1e3a8a; color: #ffffff; border-color: #1e3a8a; }
+        .table-pgr th, .table-pgr td { border: 1px solid #334155; padding: 6px 8px; font-size: 11px; }
+        .table-pgr th { background-color: #e2e8f0; font-weight: bold; text-transform: uppercase; }
+    </style>
+</head>
+<body class="text-slate-800 pb-28">
+
+    <!-- TOP NAV BAR -->
+    <header class="boreal-header text-white sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-500 text-slate-950 font-black text-xl px-2.5 py-1 rounded-md shadow">
+                    B
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg tracking-wide leading-tight flex items-center gap-2">
+                        BOREAL ENGMED <span class="text-xs bg-blue-900 border border-blue-400/40 text-blue-200 px-2 py-0.5 rounded-full font-semibold">Coleta PGR NR-01</span>
+                    </h1>
+                    <p class="text-[11px] text-blue-200">Sistema Offline de Coleta de Matrizes por Setor</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span id="status-pill" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500 text-white shadow-sm">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 mr-1"></i> Modo Offline Pronto
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- BANNER DE ORIENTAÇÃO RÁPIDA -->
+    <div class="max-w-7xl mx-auto px-4 mt-4">
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 flex flex-col md:flex-row justify-between items-center gap-2 text-xs text-blue-950 shadow-sm">
+            <div class="flex items-center gap-2">
+                <i data-lucide="info" class="w-5 h-5 text-blue-700 flex-shrink-0"></i>
+                <span><strong>Fluxo de Campo:</strong> Preencha o Solicitante e Unidade &gt; Preencha o Setor &gt; Clique em <strong>"Salvar e Adicionar Próximo Setor"</strong> para limpar os campos sem poluir a tela &gt; Ao final, veja as matrizes e baixe o Word pronto para copiar e colar no seu PGR.</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="openReviewModal()" class="bg-blue-800 hover:bg-blue-900 text-white font-bold px-3 py-1.5 rounded-lg flex items-center shadow-sm whitespace-nowrap">
+                    <i data-lucide="eye" class="w-4 h-4 mr-1.5"></i> Ver Matrizes Salvas (<span id="saved-sectors-badge">0</span>)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTAINER PRINCIPAL -->
+    <main class="max-w-7xl mx-auto px-4 py-4 space-y-6">
+
+        <!-- ========================================== -->
+        <!-- MATRIZ 01: CAPA DO PGR (SOLICITANTE)      -->
+        <!-- ========================================== -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-slate-100 border-b border-slate-200 px-5 py-3 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <span class="bg-blue-900 text-white text-xs font-extrabold px-2 py-0.5 rounded">MATRIZ 01</span>
+                    <h2 class="font-bold text-slate-800 text-sm md:text-base">Capa do PGR — Caracterização do Solicitante</h2>
+                </div>
+                <span class="text-xs text-slate-500 font-medium hidden sm:inline">Dados fixos na Capa do PGR</span>
+            </div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nome do Solicitante (Razão Social / Cliente) *</label>
+                    <input type="text" id="solicitante_nome" placeholder="Ex: INSTITUTO DE PESQUISAS TECNOLÓGICAS" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:bg-white transition" onchange="autoSave()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">CNPJ do Solicitante *</label>
+                    <input type="text" id="solicitante_cnpj" placeholder="00.000.000/0001-00" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:bg-white transition" onchange="autoSave()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Vigência (Período) *</label>
+                    <input type="text" id="solicitante_vigencia" placeholder="Ex: 2026 a 2028" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:bg-white transition" onchange="autoSave()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Data de Emissão *</label>
+                    <input type="date" id="solicitante_data_emissao" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:bg-white transition" onchange="autoSave()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">CNAE Principal</label>
+                    <input type="text" id="solicitante_cnae" placeholder="Ex: 72.10-0-00" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:bg-white transition" onchange="autoSave()">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Endereço da Sede do Solicitante</label>
+                    <input type="text" id="solicitante_endereco" placeholder="Ex: Av. Prof. Almeida Prado, 532 - Butantã, São Paulo - SP" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:bg-white transition" onchange="autoSave()">
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- MATRIZ 02: CAPÍTULO 1 (DADOS DA UNIDADE)  -->
+        <!-- ========================================== -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-slate-100 border-b border-slate-200 px-5 py-3 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <span class="bg-blue-900 text-white text-xs font-extrabold px-2 py-0.5 rounded">MATRIZ 02</span>
+                    <h2 class="font-bold text-slate-800 text-sm md:text-base">Capítulo 1 do PGR — Dados da Unidade & Relatório de Visita</h2>
+                </div>
+                <span class="text-xs text-amber-800 bg-amber-100 px-2 py-0.5 rounded font-semibold">1 por Endereço/Estabelecimento</span>
+            </div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nome da Unidade Inspecionada *</label>
+                    <input type="text" id="unidade_nome" placeholder="Ex: FÓRUM TRT - VARA DE MACAPÁ" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:bg-white transition" onchange="autoSave()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">CNPJ da Unidade *</label>
+                    <input type="text" id="unidade_cnpj" placeholder="00.000.000/0001-00" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:bg-white transition" onchange="autoSave()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Telefone / Ramal</label>
+                    <input type="text" id="unidade_tel" placeholder="(00) 00000-0000" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:bg-white transition" onchange="autoSave()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nome do Responsável da Unidade</label>
+                    <input type="text" id="unidade_resp" placeholder="Ex: Dr. Roberto Guimarães" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:bg-white transition" onchange="autoSave()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Cargo do Responsável</label>
+                    <input type="text" id="unidade_cargo_resp" placeholder="Ex: Diretor de Secretaria / Gestor" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:bg-white transition" onchange="autoSave()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Endereço Completo da Unidade</label>
+                    <input type="text" id="unidade_endereco" placeholder="Ex: Rod. Norte Sul, s/n - Macapá/AP" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:bg-white transition" onchange="autoSave()">
+                </div>
+
+                <!-- ASSINATURA / RÚBRICA DO CONTATO -->
+                <div class="md:col-span-3 border-t border-slate-200 pt-4 mt-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nome do Contato que acompanhou a equipe *</label>
+                            <input type="text" id="unidade_contato" placeholder="Nome completo do representante que acompanhou a visita" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-blue-600 focus:bg-white transition" onchange="autoSave()">
+                            <p class="text-[11px] text-slate-500 mt-2">Esse campo e a assinatura preenchem a coluna <strong>"NOME DO CONTATO E ASS."</strong> da Matriz do Capítulo 1.</p>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-bold text-slate-700 uppercase">Rúbrica / Assinatura do Contato na Tela:</span>
+                                <button type="button" onclick="clearSignature()" class="text-xs text-red-600 hover:text-red-800 font-bold flex items-center">
+                                    <i data-lucide="rotate-ccw" class="w-3 h-3 mr-1"></i> Limpar Rúbrica
+                                </button>
+                            </div>
+                            <canvas id="sig-canvas" class="signature-canvas w-full h-24 rounded-lg shadow-inner"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- FORMULÁRIO DE ENTRADA DO SETOR (NÃO POLUI A TELA)             -->
+        <!-- Preenche -> Clica em "Salvar Setor" -> Campos limpam para o próx -->
+        <!-- ============================================================== -->
+        <section class="bg-white rounded-xl shadow-md border-2 border-blue-600 overflow-hidden">
+            <div class="bg-blue-900 text-white px-5 py-3.5 flex flex-wrap justify-between items-center gap-2">
+                <div class="flex items-center space-x-2">
+                    <span class="bg-amber-400 text-slate-950 text-xs font-black px-2 py-0.5 rounded">MATRIZ DO CAPÍTULO 15</span>
+                    <h2 class="font-extrabold text-sm md:text-base tracking-wide">Entrada do Setor: GHE, Riscos, Medições e Plano de Ação</h2>
+                </div>
+                <div class="text-xs text-blue-200 font-medium">
+                    Preencha este setor e clique no botão verde abaixo para arquivar
+                </div>
+            </div>
+
+            <div class="p-5 space-y-6">
+
+                <!-- 1. GHE: SETOR E PROCESSO -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                    <div class="flex items-center space-x-2 text-blue-900 font-bold text-xs uppercase border-b border-slate-200 pb-2">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                        <span>1. Grupo Homogêneo de Exposição (GHE) & Processo de Trabalho</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nome do Setor ou da Unidade *</label>
+                            <input type="text" id="cur_setor_nome" placeholder="Ex: Almoxarifado / Secretaria da Vara / Portaria" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs font-semibold focus:ring-2 focus:ring-blue-600">
+                            <span class="text-[10px] text-slate-500">Se a unidade não tiver setor separado, repita o nome da unidade.</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Processo Operacional / Processo de Trabalho *</label>
+                            <input type="text" id="cur_setor_processo" placeholder="Ex: Recepção, triagem de correspondências, atendimento ao público e arquivamento" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-600">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. MEDIÇÕES AMBIENTAIS (COM ADICIONAR E REMOVER MEDIÇÕES) -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                    <div class="flex flex-wrap justify-between items-center border-b border-slate-200 pb-2 gap-2">
+                        <div class="flex items-center space-x-2 text-blue-900 font-bold text-xs uppercase">
+                            <i data-lucide="activity" class="w-4 h-4 text-emerald-600"></i>
+                            <span>2. Medições Ambientais (Ruído, Temperatura, Iluminância, Umidade)</span>
+                        </div>
+                        <button type="button" onclick="addMeasurementRow()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded-lg flex items-center shadow-sm">
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5 mr-1"></i> + Adicionar Novo Ponto de Medição
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-600">Caso o setor tenha ambientes distintos, adicione novos pontos de medição abaixo:</p>
+
+                    <div id="measurements-container" class="space-y-2">
+                        <!-- Linha de medição 1 -->
+                        <div class="measurement-row grid grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-lg border border-slate-200">
+                            <div class="col-span-12 md:col-span-4">
+                                <label class="text-[10px] font-bold text-slate-500 block">Ambiente / Ponto de Medição</label>
+                                <input type="text" class="m-ponto w-full border border-slate-300 rounded p-1.5 text-xs" placeholder="Ex: Mesa de Triagem / Sala Principal">
+                            </div>
+                            <div class="col-span-3 md:col-span-2">
+                                <label class="text-[10px] font-bold text-slate-500 block">Ruído (dB)</label>
+                                <input type="text" class="m-ruido w-full border border-slate-300 rounded p-1.5 text-xs text-center" placeholder="Ex: 58.4">
+                            </div>
+                            <div class="col-span-3 md:col-span-2">
+                                <label class="text-[10px] font-bold text-slate-500 block">Temp. (°C)</label>
+                                <input type="text" class="m-temp w-full border border-slate-300 rounded p-1.5 text-xs text-center" placeholder="Ex: 23.5">
+                            </div>
+                            <div class="col-span-3 md:col-span-2">
+                                <label class="text-[10px] font-bold text-slate-500 block">Ilum. (Lux)</label>
+                                <input type="text" class="m-ilum w-full border border-slate-300 rounded p-1.5 text-xs text-center" placeholder="Ex: 450">
+                            </div>
+                            <div class="col-span-2 md:col-span-1">
+                                <label class="text-[10px] font-bold text-slate-500 block">Um. (%)</label>
+                                <input type="text" class="m-umid w-full border border-slate-300 rounded p-1.5 text-xs text-center" placeholder="Ex: 55">
+                            </div>
+                            <div class="col-span-1 text-center pt-3">
+                                <button type="button" onclick="removeMeasurementRow(this)" class="text-slate-400 hover:text-red-600" title="Remover medição">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. CARGOS, QUANTITATIVO E ATIVIDADES (COM ADICIONAR E REMOVER CARGOS) -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                    <div class="flex flex-wrap justify-between items-center border-b border-slate-200 pb-2 gap-2">
+                        <div class="flex items-center space-x-2 text-blue-900 font-bold text-xs uppercase">
+                            <i data-lucide="users" class="w-4 h-4 text-blue-700"></i>
+                            <span>3. Cargos, Quantidade e Descrição das Atividades</span>
+                        </div>
+                        <button type="button" onclick="addCargoRow()" class="text-xs bg-blue-700 hover:bg-blue-800 text-white font-bold px-2.5 py-1 rounded-lg flex items-center shadow-sm">
+                            <i data-lucide="user-plus" class="w-3.5 h-3.5 mr-1"></i> + Adicionar Cargo
+                        </button>
+                    </div>
+
+                    <div id="cargos-container" class="space-y-2">
+                        <!-- Cargo Row 1 -->
+                        <div class="cargo-row grid grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-lg border border-slate-200">
+                            <div class="col-span-12 md:col-span-4">
+                                <label class="text-[10px] font-bold text-slate-500 block">Nome do Cargo *</label>
+                                <input type="text" class="c-nome w-full border border-slate-300 rounded p-1.5 text-xs font-semibold" placeholder="Ex: Técnico Judiciário / Analista">
+                            </div>
+                            <div class="col-span-4 md:col-span-2">
+                                <label class="text-[10px] font-bold text-slate-500 block">Qtd Trabalhadores *</label>
+                                <input type="number" class="c-qtd w-full border border-slate-300 rounded p-1.5 text-xs text-center font-bold" placeholder="1" value="1">
+                            </div>
+                            <div class="col-span-7 md:col-span-5">
+                                <label class="text-[10px] font-bold text-slate-500 block">Descrição Detalhada das Atividades *</label>
+                                <input type="text" class="c-ativ w-full border border-slate-300 rounded p-1.5 text-xs" placeholder="Ex: Digitação processual, atendimento a partes e advogados, organização de autos">
+                            </div>
+                            <div class="col-span-1 text-center pt-3">
+                                <button type="button" onclick="removeCargoRow(this)" class="text-slate-400 hover:text-red-600" title="Remover Cargo">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. INVENTÁRIO DE RISCOS OCUPACIONAIS & PLANO DE AÇÃO -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
+                    <div class="flex flex-wrap justify-between items-center border-b border-slate-200 pb-2 gap-2">
+                        <div class="flex items-center space-x-2 text-blue-900 font-bold text-xs uppercase">
+                            <i data-lucide="shield-alert" class="w-4 h-4 text-amber-600"></i>
+                            <span>4. Inventário de Riscos Ocupacionais & Plano de Ação do Setor</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="addManualRisk()" class="text-xs bg-slate-700 hover:bg-slate-800 text-white font-bold px-2.5 py-1 rounded-lg flex items-center shadow-sm">
+                                <i data-lucide="plus" class="w-3.5 h-3.5 mr-1"></i> + Novo Risco Manual (Em Branco)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- BARRAS DE BOTÕES PARA OS 6 GRUPOS DE RISCO -->
+                    <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                        <span class="text-[11px] font-bold text-slate-700 uppercase block">Selecione o Grupo de Risco para carregar os Perigos na Lista Suspensa:</span>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="filterRiskGroup('Físico')" class="risk-group-btn bg-slate-100 hover:bg-blue-100 border border-slate-300 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-md flex items-center transition">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5"></span> FÍSICO
+                            </button>
+                            <button type="button" onclick="filterRiskGroup('Químico')" class="risk-group-btn bg-slate-100 hover:bg-blue-100 border border-slate-300 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-md flex items-center transition">
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-500 mr-1.5"></span> QUÍMICO
+                            </button>
+                            <button type="button" onclick="filterRiskGroup('Biológico')" class="risk-group-btn bg-slate-100 hover:bg-blue-100 border border-slate-300 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-md flex items-center transition">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-600 mr-1.5"></span> BIOLÓGICO
+                            </button>
+                            <button type="button" onclick="filterRiskGroup('Ergonômico')" class="risk-group-btn bg-slate-100 hover:bg-blue-100 border border-slate-300 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-md flex items-center transition">
+                                <span class="w-2.5 h-2.5 rounded-full bg-yellow-500 mr-1.5"></span> ERGONÔMICO
+                            </button>
+                            <button type="button" onclick="filterRiskGroup('Acidente')" class="risk-group-btn bg-slate-100 hover:bg-blue-100 border border-slate-300 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-md flex items-center transition">
+                                <span class="w-2.5 h-2.5 rounded-full bg-blue-600 mr-1.5"></span> ACIDENTE
+                            </button>
+                            <button type="button" onclick="filterRiskGroup('Psicossocial')" class="risk-group-btn bg-slate-100 hover:bg-blue-100 border border-slate-300 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-md flex items-center transition">
+                                <span class="w-2.5 h-2.5 rounded-full bg-purple-600 mr-1.5"></span> PSICOSSOCIAL
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CONTAINER DOS CARDS DE RISCOS DO SETOR ATUAL -->
+                    <div id="risks-container" class="space-y-4">
+                        <!-- Inserido dinamicamente via JS -->
+                    </div>
+
+                    <!-- RESPONSÁVEL DO PLANO DE AÇÃO DO SETOR (COM BOTÃO "O MESMO") -->
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3.5 mt-3 space-y-2">
+                        <div class="flex flex-wrap justify-between items-center gap-2">
+                            <label class="block text-xs font-bold text-amber-950 uppercase">
+                                Responsável pela Implementação do Plano de Ação deste Setor:
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="useSameResponsavel()" class="text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold px-2.5 py-1 rounded shadow-sm flex items-center">
+                                    <i data-lucide="copy" class="w-3.5 h-3.5 mr-1"></i> "O MESMO" (Copiar do Setor Anterior)
+                                </button>
+                                <select id="resp_historico_select" onchange="selectFromRespHistory(this)" class="text-xs border border-amber-300 rounded p-1 bg-white">
+                                    <option value="">-- Escolher do Histórico --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <input type="text" id="cur_setor_resp" placeholder="Ex: Diretoria da Vara / Coordenadoria Administrativa / EHS" class="w-full bg-white border border-amber-300 rounded-lg p-2.5 text-xs font-semibold focus:ring-2 focus:ring-amber-500">
+                    </div>
+                </div>
+
+                <!-- BOTÃO PRINCIPAL DE SALVAR O SETOR E LIMPAR PARA O PRÓXIMO -->
+                <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <div class="text-xs text-slate-600">
+                        <i data-lucide="check-circle" class="w-4 h-4 inline mr-1 text-emerald-600"></i>
+                        Ao clicar, este setor será salvo e arquivado nas Matrizes. A tela será limpa automaticamente para você registrar o próximo setor sem poluição visual.
+                    </div>
+                    <button type="button" onclick="saveAndResetSector()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-6 py-3 rounded-xl shadow-lg flex items-center justify-center text-sm transition transform active:scale-95 whitespace-nowrap">
+                        <i data-lucide="save" class="w-5 h-5 mr-2"></i> SALVAR E ADICIONAR PRÓXIMO SETOR
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- LISTA DE SETORES JÁ CADASTRADOS (PAINEL DE CONTROLE)           -->
+        <!-- ============================================================== -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-slate-100 border-b border-slate-200 px-5 py-3 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="folder-check" class="w-5 h-5 text-blue-900"></i>
+                    <h2 class="font-bold text-slate-800 text-sm md:text-base">Setores Salvos para este PGR (<span id="saved-sectors-count">0</span>)</h2>
+                </div>
+                <button type="button" onclick="openReviewModal()" class="text-xs text-blue-800 hover:underline font-bold flex items-center">
+                    <i data-lucide="eye" class="w-3.5 h-3.5 mr-1"></i> Visualizar Todas Matrizes
+                </button>
+            </div>
+            <div class="p-5">
+                <div id="sectors-list-empty" class="text-center py-6 text-slate-400 text-xs">
+                    Nenhum setor adicionado ainda. Preencha os campos acima e clique em <strong>"SALVAR E ADICIONAR PRÓXIMO SETOR"</strong>.
+                </div>
+                <div id="sectors-list-container" class="space-y-2 hidden">
+                    <!-- Cards de setores cadastrados -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- ÁREA FINAL DE EXPORTAÇÃO (GERAR MATRIZES EM WORD / COPIAR)     -->
+        <!-- ============================================================== -->
+        <section class="bg-gradient-to-r from-blue-950 to-slate-900 rounded-xl shadow-xl p-6 text-white space-y-4">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h3 class="text-lg font-black tracking-wide flex items-center gap-2">
+                        <i data-lucide="file-output" class="w-5 h-5 text-amber-400"></i>
+                        EXPORTAÇÃO DAS MATRIZES DO PGR
+                    </h3>
+                    <p class="text-xs text-slate-300 mt-1">
+                        Gere o arquivo Word (.docx) formatado exatamente conforme as matrizes padronizadas ou visualize na tela para copiar e colar diretamente no modelo oficial do PGR.
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                    <button type="button" onclick="openReviewModal()" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2.5 rounded-lg border border-slate-600 text-xs flex items-center justify-center">
+                        <i data-lucide="layout-grid" class="w-4 h-4 mr-2"></i> Ver Matrizes na Tela (Copiar e Colar)
+                    </button>
+                    <button type="button" onclick="exportWordDocument()" class="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-6 py-2.5 rounded-lg text-xs flex items-center justify-center shadow-lg transition transform active:scale-95">
+                        <i data-lucide="file-text" class="w-4 h-4 mr-2"></i> BAIXAR MATRIZES EM WORD (.DOCX)
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ============================================================== -->
+    <!-- MODAL DE VISUALIZAÇÃO E CÓPIA DAS MATRIZES (OFFLINE)           -->
+    <!-- ============================================================== -->
+    <div id="review-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-2 sm:p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
+            <!-- Modal Header -->
+            <div class="boreal-header text-white px-6 py-4 flex justify-between items-center border-b border-blue-900">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="table" class="w-5 h-5 text-amber-400"></i>
+                    <h3 class="font-extrabold text-base">Visualização das Matrizes Salvas (Prontas para Copiar)</h3>
+                </div>
+                <button type="button" onclick="closeReviewModal()" class="text-slate-300 hover:text-white">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content (Scrollable) -->
+            <div class="p-6 overflow-y-auto space-y-6 text-xs" id="modal-tables-preview">
+                <!-- Tabelas geradas dinamicamente -->
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-slate-100 border-t border-slate-200 px-6 py-3 flex justify-between items-center">
+                <button type="button" onclick="copyModalContent()" class="bg-blue-800 hover:bg-blue-900 text-white font-bold px-4 py-2 rounded-lg flex items-center text-xs">
+                    <i data-lucide="copy" class="w-4 h-4 mr-1.5"></i> Copiar Tabelas Selecionadas
+                </button>
+                <button type="button" onclick="closeReviewModal()" class="bg-slate-300 hover:bg-slate-400 text-slate-800 font-bold px-4 py-2 rounded-lg text-xs">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DO BANCO EMBUTIDO E LÓGICA DO SISTEMA -->
+    <script>
+        // BANCO EMBUTIDO DOS 159 RISCOS DO ARQUIVO "Inventario de Riscos - PGR RESUMIDO.xlsx"
+        let riskDatabaseGroups = {};
+
+        // MATRIZ DE RISCO 5x5 DA BOREAL / ENIT (Probabilidade x Severidade = Nível)
+        const riskMatrix = {
+            '5': { 'Leve': 'Significativo', 'Moderada': 'Sério', 'Grave Reversível': 'Crítico', 'Grave Irreversível': 'Crítico', 'Crítica/ Fatal': 'Crítico' },
+            '4': { 'Leve': 'Significativo', 'Moderada': 'Significativo', 'Grave Reversível': 'Sério', 'Grave Irreversível': 'Crítico', 'Crítica/ Fatal': 'Crítico' },
+            '3': { 'Leve': 'Tolerável', 'Moderada': 'Significativo', 'Grave Reversível': 'Sério', 'Grave Irreversível': 'Sério', 'Crítica/ Fatal': 'Crítico' },
+            '2': { 'Leve': 'Tolerável', 'Moderada': 'Tolerável', 'Grave Reversível': 'Significativo', 'Grave Irreversível': 'Significativo', 'Crítica/ Fatal': 'Sério' },
+            '1': { 'Leve': 'Irrelevante', 'Moderada': 'Tolerável', 'Grave Reversível': 'Tolerável', 'Grave Irreversível': 'Significativo', 'Crítica/ Fatal': 'Significativo' }
+        };
+
+        // ESTADO GLOBAL DO SISTEMA
+        let appState = {
+            solicitante: {},
+            unidade: { signature: "" },
+            savedSectors: [],
+            lastResponsavel: "",
+            responsavelHistory: []
+        };
+
+        let currentActiveGroup = 'Físico';
+        let canvas, ctx, isDrawing = false;
+
+        // INICIALIZAÇÃO
+        document.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+            initSignatureCanvas();
+            await loadRiskDatabase();
+            loadStateFromStorage();
+            filterRiskGroup('Físico');
+            if (document.querySelectorAll('.risk-card').length === 0) {
+                addRiskCard();
+            }
+        });
+
+        // CARREGA BANCO DE DADOS (EMBUTIDO OU VIA FETCH)
+        async function loadRiskDatabase() {
+            try {
+                const res = await fetch('extracted_risks.json');
+                if (res.ok) {
+                    riskDatabaseGroups = await res.json();
+                }
+            } catch(e) {
+                console.warn("Utilizando banco de dados local embutido.");
+            }
+        }
+
+        // CANVAS DA RÚBRICA / ASSINATURA
+        function initSignatureCanvas() {
+            canvas = document.getElementById('sig-canvas');
+            if(!canvas) return;
+            ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth || 300;
+            canvas.height = canvas.offsetHeight || 96;
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#1e3a8a';
+
+            function getPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                return {
+                    x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left,
+                    y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top
+                };
+            }
+
+            canvas.addEventListener('mousedown', (e) => { isDrawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
+            canvas.addEventListener('mousemove', (e) => { if(isDrawing) { const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); autoSave(); } });
+            window.addEventListener('mouseup', () => isDrawing = false);
+
+            canvas.addEventListener('touchstart', (e) => { isDrawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); e.preventDefault(); });
+            canvas.addEventListener('touchmove', (e) => { if(isDrawing) { const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); autoSave(); } e.preventDefault(); });
+            canvas.addEventListener('touchend', () => isDrawing = false);
+        }
+
+        function clearSignature() {
+            if(!ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            appState.unidade.signature = "";
+            autoSave();
+        }
+
+        // ==========================================
+        // FILTROS DOS 6 GRUPOS DE RISCO
+        // ==========================================
+        function filterRiskGroup(groupName) {
+            currentActiveGroup = groupName;
+            document.querySelectorAll('.risk-group-btn').forEach(btn => {
+                if (btn.textContent.trim().toUpperCase().includes(groupName.toUpperCase())) {
+                    btn.classList.add('bg-blue-900', 'text-white', 'border-blue-900');
+                    btn.classList.remove('bg-slate-100', 'text-slate-800');
+                } else {
+                    btn.classList.remove('bg-blue-900', 'text-white', 'border-blue-900');
+                    btn.classList.add('bg-slate-100', 'text-slate-800');
+                }
+            });
+
+            // Atualiza todos os selects de risco na tela
+            document.querySelectorAll('.risk-select').forEach(select => {
+                updateRiskSelectOptions(select, groupName);
+            });
+        }
+
+        function updateRiskSelectOptions(select, groupName) {
+            const currentVal = select.value;
+            select.innerHTML = `<option value="">-- SELECIONE O PERIGO DO GRUPO [${groupName.toUpperCase()}] --</option>`;
+            
+            const list = riskDatabaseGroups[groupName] || [];
+            list.forEach((item, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = `${item.perigo.substring(0, 95)}${item.perigo.length > 95 ? '...' : ''}`;
+                select.appendChild(opt);
+            });
+        }
+
+        function onRiskSelected(selectElem) {
+            const idx = selectElem.value;
+            const card = selectElem.closest('.risk-card');
+            if (idx === "" || !riskDatabaseGroups[currentActiveGroup] || !riskDatabaseGroups[currentActiveGroup][idx]) return;
+
+            const r = riskDatabaseGroups[currentActiveGroup][idx];
+            card.querySelector('.field-perigo').value = r.perigo || '';
+            card.querySelector('.field-fonte').value = r.fonte || '';
+            card.querySelector('.field-risco').value = r.risco || '';
+            card.querySelector('.field-prop').value = r.propagacao || '';
+            card.querySelector('.field-lesoes').value = r.lesoes || '';
+            card.querySelector('.field-medidas').value = r.medidas || '';
+            card.querySelector('.field-acao').value = r.plano || '';
+            
+            if (r.prazo) {
+                const prazoSelect = card.querySelector('.field-prazo');
+                let found = false;
+                for(let opt of prazoSelect.options) {
+                    if (r.prazo.toLowerCase().includes(opt.value.toLowerCase())) {
+                        prazoSelect.value = opt.value;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) prazoSelect.value = "Até 90 dias";
+            }
+
+            if (r.severidade) {
+                const sevSelect = card.querySelector('.field-sev');
+                for(let opt of sevSelect.options) {
+                    if (opt.value.toLowerCase().includes(r.severidade.toLowerCase())) {
+                        sevSelect.value = opt.value;
+                        break;
+                    }
+                }
+            }
+            calculateRiskMatrix(card.querySelector('.field-sev'));
+        }
+
+        function calculateRiskMatrix(elem) {
+            const card = elem.closest('.risk-card');
+            const prob = card.querySelector('.field-prob').value;
+            const sev = card.querySelector('.field-sev').value;
+            const nivelInput = card.querySelector('.field-nivel');
+
+            if (prob && sev && riskMatrix[prob] && riskMatrix[prob][sev]) {
+                const nivel = riskMatrix[prob][sev];
+                nivelInput.value = nivel.toUpperCase();
+
+                nivelInput.className = "field-nivel w-full font-extrabold text-center rounded p-2 text-xs shadow-inner ";
+                if (nivel === 'Irrelevante' || nivel === 'Tolerável') {
+                    nivelInput.classList.add("bg-emerald-100", "text-emerald-900", "border-2", "border-emerald-400");
+                } else if (nivel === 'Significativo') {
+                    nivelInput.classList.add("bg-amber-100", "text-amber-900", "border-2", "border-amber-400");
+                } else if (nivel === 'Sério') {
+                    nivelInput.classList.add("bg-orange-100", "text-orange-900", "border-2", "border-orange-500");
+                } else {
+                    nivelInput.classList.add("bg-red-200", "text-red-950", "border-2", "border-red-600");
+                }
+            } else {
+                nivelInput.value = "Selecione Prob. e Sev.";
+                nivelInput.className = "field-nivel w-full border-2 border-amber-400 bg-amber-100 text-amber-900 font-extrabold text-center rounded p-2 text-xs shadow-inner";
+            }
+        }
+
+        // ==========================================
+        // ADIÇÃO E REMOÇÃO DINÂMICA
+        // ==========================================
+        function addMeasurementRow() {
+            const container = document.getElementById('measurements-container');
+            const div = document.createElement('div');
+            div.className = "measurement-row grid grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-lg border border-slate-200";
+            div.innerHTML = `
+                <div class="col-span-12 md:col-span-4">
+                    <label class="text-[10px] font-bold text-slate-500 block">Ambiente / Ponto de Medição</label>
+                    <input type="text" class="m-ponto w-full border border-slate-300 rounded p-1.5 text-xs" placeholder="Ex: Sala de Audiências">
+                </div>
+                <div class="col-span-3 md:col-span-2">
+                    <label class="text-[10px] font-bold text-slate-500 block">Ruído (dB)</label>
+                    <input type="text" class="m-ruido w-full border border-slate-300 rounded p-1.5 text-xs text-center" placeholder="Ex: 58.4">
+                </div>
+                <div class="col-span-3 md:col-span-2">
+                    <label class="text-[10px] font-bold text-slate-500 block">Temp. (°C)</label>
+                    <input type="text" class="m-temp w-full border border-slate-300 rounded p-1.5 text-xs text-center" placeholder="Ex: 23.5">
+                </div>
+                <div class="col-span-3 md:col-span-2">
+                    <label class="text-[10px] font-bold text-slate-500 block">Ilum. (Lux)</label>
+                    <input type="text" class="m-ilum w-full border border-slate-300 rounded p-1.5 text-xs text-center" placeholder="Ex: 450">
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="text-[10px] font-bold text-slate-500 block">Um. (%)</label>
+                    <input type="text" class="m-umid w-full border border-slate-300 rounded p-1.5 text-xs text-center" placeholder="Ex: 55">
+                </div>
+                <div class="col-span-1 text-center pt-3">
+                    <button type="button" onclick="removeMeasurementRow(this)" class="text-slate-400 hover:text-red-600" title="Remover medição">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(div);
+            lucide.createIcons();
+        }
+
+        function removeMeasurementRow(btn) {
+            const rows = document.querySelectorAll('.measurement-row');
+            if (rows.length > 1) {
+                btn.closest('.measurement-row').remove();
+            } else {
+                alert("Mantenha ao menos uma linha de medição (deixe em branco caso não avaliado).");
+            }
+        }
+
+        function addCargoRow() {
+            const container = document.getElementById('cargos-container');
+            const div = document.createElement('div');
+            div.className = "cargo-row grid grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-lg border border-slate-200";
+            div.innerHTML = `
+                <div class="col-span-12 md:col-span-4">
+                    <label class="text-[10px] font-bold text-slate-500 block">Nome do Cargo *</label>
+                    <input type="text" class="c-nome w-full border border-slate-300 rounded p-1.5 text-xs font-semibold" placeholder="Ex: Assistente / Escrevente">
+                </div>
+                <div class="col-span-4 md:col-span-2">
+                    <label class="text-[10px] font-bold text-slate-500 block">Qtd Trabalhadores *</label>
+                    <input type="number" class="c-qtd w-full border border-slate-300 rounded p-1.5 text-xs text-center font-bold" placeholder="1" value="1">
+                </div>
+                <div class="col-span-7 md:col-span-5">
+                    <label class="text-[10px] font-bold text-slate-500 block">Descrição Detalhada das Atividades *</label>
+                    <input type="text" class="c-ativ w-full border border-slate-300 rounded p-1.5 text-xs" placeholder="Descrição das atividades">
+                </div>
+                <div class="col-span-1 text-center pt-3">
+                    <button type="button" onclick="removeCargoRow(this)" class="text-slate-400 hover:text-red-600" title="Remover Cargo">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(div);
+            lucide.createIcons();
+        }
+
+        function removeCargoRow(btn) {
+            const rows = document.querySelectorAll('.cargo-row');
+            if (rows.length > 1) {
+                btn.closest('.cargo-row').remove();
+            } else {
+                alert("Mantenha ao menos uma linha de cargo.");
+            }
+        }
+
+        function addRiskCard() {
+            const container = document.getElementById('risks-container');
+            const count = container.querySelectorAll('.risk-card').length + 1;
+            const div = document.createElement('div');
+            div.className = "risk-card border-2 border-slate-200 rounded-xl p-4 bg-white relative space-y-3 shadow-sm";
+            div.innerHTML = `
+                <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2"></span> Registro de Risco #<span class="risk-index">${count}</span>
+                    </span>
+                    <button type="button" onclick="removeRiskCard(this)" class="text-xs text-red-600 hover:underline flex items-center font-bold">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5 mr-1"></i> Remover Risco
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Selecione o Perigo do Grupo [${currentActiveGroup.toUpperCase()}]:</label>
+                    <select onchange="onRiskSelected(this)" class="risk-select w-full bg-blue-50/50 border border-blue-200 rounded-lg p-2.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-blue-500">
+                        <option value="">-- SELECIONE O PERIGO --</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-700 block">PERIGO / FATOR DE RISCO *</label>
+                        <textarea rows="2" class="field-perigo w-full border border-slate-300 rounded p-2 text-xs font-medium"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-700 block">FONTE GERADORA</label>
+                        <textarea rows="2" class="field-fonte w-full border border-slate-300 rounded p-2 text-xs"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-700 block">RISCO / EVENTO</label>
+                        <textarea rows="2" class="field-risco w-full border border-slate-300 rounded p-2 text-xs"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-700 block">VIA DE PROPAGAÇÃO / MEIO</label>
+                        <textarea rows="2" class="field-prop w-full border border-slate-300 rounded p-2 text-xs"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-700 block">LESÕES OU AGRAVOS À SAÚDE</label>
+                        <textarea rows="2" class="field-lesoes w-full border border-slate-300 rounded p-2 text-xs"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-700 block">MEDIDAS EXISTENTES</label>
+                        <textarea rows="2" class="field-medidas w-full border border-slate-300 rounded p-2 text-xs" placeholder="Ex: Iluminação natural/artificial, pausas, ergonomia..."></textarea>
+                    </div>
+                </div>
+
+                <div class="bg-amber-50/60 border border-amber-200 rounded-lg p-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+                    <div>
+                        <label class="text-[11px] font-bold text-amber-900 block mb-1">PROBABILIDADE (1 a 5) *</label>
+                        <select onchange="calculateRiskMatrix(this)" class="field-prob w-full border border-amber-300 rounded p-2 text-xs bg-white font-semibold">
+                            <option value="">-- Selecione --</option>
+                            <option value="1">1 — Altamente improvável</option>
+                            <option value="2">2 — Improvável</option>
+                            <option value="3" selected>3 — Pouco provável</option>
+                            <option value="4">4 — Provável</option>
+                            <option value="5">5 — Altamente provável</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-amber-900 block mb-1">SEVERIDADE (1 a 5) *</label>
+                        <select onchange="calculateRiskMatrix(this)" class="field-sev w-full border border-amber-300 rounded p-2 text-xs bg-white font-semibold">
+                            <option value="">-- Selecione --</option>
+                            <option value="Leve">1 — Leve</option>
+                            <option value="Moderada" selected>2 — Moderada</option>
+                            <option value="Grave Reversível">3 — Grave Reversível</option>
+                            <option value="Grave Irreversível">4 — Grave Irreversível</option>
+                            <option value="Crítica/ Fatal">5 — Crítica/ Fatal</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-amber-900 block mb-1">NÍVEL DE RISCO (AUTOMÁTICO)</label>
+                        <input type="text" readonly class="field-nivel w-full border-2 border-amber-400 bg-amber-100 text-amber-900 font-extrabold text-center rounded p-2 text-xs shadow-inner" value="SIGNIFICATIVO">
+                    </div>
+                </div>
+
+                <div class="bg-blue-50/40 border border-blue-200 rounded-lg p-3 space-y-2">
+                    <span class="text-xs font-bold text-blue-900 uppercase block">Plano de Ação para o Risco Identificado</span>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="md:col-span-2">
+                            <label class="text-[11px] font-semibold text-slate-700 block">Medida de Prevenção / Correção *</label>
+                            <input type="text" class="field-acao w-full border border-slate-300 rounded p-2 text-xs bg-white" placeholder="Ação preventiva recomendada">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-700 block">Prazo para Implantação *</label>
+                            <select class="field-prazo w-full border border-slate-300 rounded p-2 text-xs bg-white font-medium">
+                                <option value="Imediato">Imediato</option>
+                                <option value="Até 30 dias">Até 30 dias</option>
+                                <option value="Até 60 dias">Até 60 dias</option>
+                                <option value="Até 90 dias" selected>Até 90 dias</option>
+                                <option value="Até 120 dias">Até 120 dias</option>
+                                <option value="Até 180 dias">Até 180 dias</option>
+                                <option value="Até 360 dias">Até 360 dias (1 ano)</option>
+                                <option value="Contínuo / Permanente">Contínuo / Permanente</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+            updateRiskSelectOptions(div.querySelector('.risk-select'), currentActiveGroup);
+            calculateRiskMatrix(div.querySelector('.field-sev'));
+            lucide.createIcons();
+        }
+
+        function addManualRisk() {
+            addRiskCard();
+            const cards = document.querySelectorAll('.risk-card');
+            const last = cards[cards.length - 1];
+            last.querySelector('.field-perigo').focus();
+        }
+
+        function removeRiskCard(btn) {
+            const cards = document.querySelectorAll('.risk-card');
+            if (cards.length > 1) {
+                btn.closest('.risk-card').remove();
+                document.querySelectorAll('.risk-card').forEach((c, idx) => {
+                    c.querySelector('.risk-index').textContent = idx + 1;
+                });
+            } else {
+                alert("Mantenha ao menos um card de risco para o setor.");
+            }
+        }
+
+        // ==========================================
+        // BOTÃO "O MESMO" PARA O RESPONSÁVEL
+        // ==========================================
+        function useSameResponsavel() {
+            const curInput = document.getElementById('cur_setor_resp');
+            if (appState.lastResponsavel) {
+                curInput.value = appState.lastResponsavel;
+            } else {
+                alert("Nenhum responsável foi cadastrado em setor anterior ainda.");
+            }
+        }
+
+        function selectFromRespHistory(select) {
+            if (select.value) {
+                document.getElementById('cur_setor_resp').value = select.value;
+                select.value = "";
+            }
+        }
+
+        function updateRespDropdown() {
+            const sel = document.getElementById('resp_historico_select');
+            sel.innerHTML = `<option value="">-- Escolher do Histórico --</option>`;
+            appState.responsavelHistory.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r;
+                opt.textContent = r;
+                sel.appendChild(opt);
+            });
+        }
+
+        // ==============================================================
+        // SALVAR SETOR ATUAL E LIMPAR TELA (SEM POLUIÇÃO VISUAL)
+        // ==============================================================
+        function saveAndResetSector() {
+            const setorNome = document.getElementById('cur_setor_nome').value.trim();
+            const setorProcesso = document.getElementById('cur_setor_processo').value.trim();
+
+            if (!setorNome) {
+                alert("Por favor, preencha o Nome do Setor (ou da Unidade) antes de salvar.");
+                document.getElementById('cur_setor_nome').focus();
+                return;
+            }
+
+            // Coletar Medições
+            const measurements = [];
+            document.querySelectorAll('.measurement-row').forEach(row => {
+                measurements.push({
+                    ponto: row.querySelector('.m-ponto').value.trim(),
+                    ruido: row.querySelector('.m-ruido').value.trim(),
+                    temp: row.querySelector('.m-temp').value.trim(),
+                    ilum: row.querySelector('.m-ilum').value.trim(),
+                    umid: row.querySelector('.m-umid').value.trim()
+                });
+            });
+
+            // Coletar Cargos
+            const cargos = [];
+            document.querySelectorAll('.cargo-row').forEach(row => {
+                cargos.push({
+                    nome: row.querySelector('.c-nome').value.trim(),
+                    qtd: row.querySelector('.c-qtd').value.trim() || "1",
+                    atividades: row.querySelector('.c-ativ').value.trim()
+                });
+            });
+
+            // Coletar Riscos
+            const riscos = [];
+            document.querySelectorAll('.risk-card').forEach(card => {
+                const perigo = card.querySelector('.field-perigo').value.trim();
+                if (perigo) {
+                    riscos.push({
+                        perigo: perigo,
+                        fonte: card.querySelector('.field-fonte').value.trim(),
+                        risco: card.querySelector('.field-risco').value.trim(),
+                        propagacao: card.querySelector('.field-prop').value.trim(),
+                        lesoes: card.querySelector('.field-lesoes').value.trim(),
+                        medidas: card.querySelector('.field-medidas').value.trim(),
+                        prob: card.querySelector('.field-prob').value,
+                        sev: card.querySelector('.field-sev').value,
+                        nivel: card.querySelector('.field-nivel').value,
+                        acao: card.querySelector('.field-acao').value.trim(),
+                        prazo: card.querySelector('.field-prazo').value
+                    });
+                }
+            });
+
+            const resp = document.getElementById('cur_setor_resp').value.trim();
+            if (resp) {
+                appState.lastResponsavel = resp;
+                if (!appState.responsavelHistory.includes(resp)) {
+                    appState.responsavelHistory.push(resp);
+                    updateRespDropdown();
+                }
+            }
+
+            // Salvar no estado global
+            const sectorObject = {
+                id: Date.now(),
+                nome: setorNome,
+                processo: setorProcesso,
+                measurements: measurements,
+                cargos: cargos,
+                riscos: riscos,
+                responsavel: resp
+            };
+
+            appState.savedSectors.push(sectorObject);
+            renderSavedSectorsList();
+            autoSave();
+
+            // LIMPAR OS CAMPOS PARA O PRÓXIMO SETOR
+            resetSectorForm();
+
+            alert(`Setor "${setorNome}" salvo com sucesso! Os campos foram limpos para você preencher o próximo setor.`);
+            window.scrollTo({ top: document.querySelector('section:nth-of-type(3)').offsetTop - 70, behavior: 'smooth' });
+        }
+
+        function resetSectorForm() {
+            document.getElementById('cur_setor_nome').value = "";
+            document.getElementById('cur_setor_processo').value = "";
+            
+            // Reseta medições para 1 linha em branco
+            const mContainer = document.getElementById('measurements-container');
+            mContainer.innerHTML = "";
+            addMeasurementRow();
+
+            // Reseta cargos para 1 linha em branco
+            const cContainer = document.getElementById('cargos-container');
+            cContainer.innerHTML = "";
+            addCargoRow();
+
+            // Reseta riscos para 1 card inicial
+            const rContainer = document.getElementById('risks-container');
+            rContainer.innerHTML = "";
+            addRiskCard();
+
+            // Mantém ou limpa o responsável sugerindo "O Mesmo"
+            document.getElementById('cur_setor_resp').value = "";
+        }
+
+        function renderSavedSectorsList() {
+            const listContainer = document.getElementById('sectors-list-container');
+            const emptyNotice = document.getElementById('sectors-list-empty');
+            const countBadge = document.getElementById('saved-sectors-count');
+            const badgeTop = document.getElementById('saved-sectors-badge');
+
+            const count = appState.savedSectors.length;
+            countBadge.textContent = count;
+            badgeTop.textContent = count;
+
+            if (count === 0) {
+                emptyNotice.classList.remove('hidden');
+                listContainer.classList.add('hidden');
+                listContainer.innerHTML = "";
+                return;
+            }
+
+            emptyNotice.classList.add('hidden');
+            listContainer.classList.remove('hidden');
+            listContainer.innerHTML = "";
+
+            appState.savedSectors.forEach((sec, idx) => {
+                const item = document.createElement('div');
+                item.className = "flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-3 rounded-lg border border-slate-200 gap-2";
+                item.innerHTML = `
+                    <div>
+                        <span class="text-xs font-black text-blue-900 bg-blue-100 px-2 py-0.5 rounded mr-2">#${idx + 1}</span>
+                        <strong class="text-xs text-slate-800">${sec.nome}</strong>
+                        <span class="text-[11px] text-slate-500 ml-2">(${sec.cargos.length} cargo(s), ${sec.riscos.length} risco(s), ${sec.measurements.length} medição(ões))</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button type="button" onclick="editSector(${sec.id})" class="text-xs text-blue-700 hover:text-blue-900 font-bold px-2 py-1 rounded bg-white border border-slate-200">
+                            Editar
+                        </button>
+                        <button type="button" onclick="removeSector(${sec.id})" class="text-xs text-red-600 hover:text-red-800 font-bold px-2 py-1 rounded bg-white border border-slate-200">
+                            Remover
+                        </button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function removeSector(id) {
+            if (confirm("Deseja realmente remover este setor salvo?")) {
+                appState.savedSectors = appState.savedSectors.filter(s => s.id !== id);
+                renderSavedSectorsList();
+                autoSave();
+            }
+        }
+
+        function editSector(id) {
+            const sec = appState.savedSectors.find(s => s.id === id);
+            if (!sec) return;
+
+            if (confirm(`Deseja carregar o setor "${sec.nome}" de volta nos campos para edição? (Ao salvar novamente, confirme a inclusão).`)) {
+                document.getElementById('cur_setor_nome').value = sec.nome;
+                document.getElementById('cur_setor_processo').value = sec.processo;
+                document.getElementById('cur_setor_resp').value = sec.responsavel || "";
+
+                // Carrega medições
+                const mContainer = document.getElementById('measurements-container');
+                mContainer.innerHTML = "";
+                sec.measurements.forEach(m => {
+                    addMeasurementRow();
+                    const rows = document.querySelectorAll('.measurement-row');
+                    const last = rows[rows.length - 1];
+                    last.querySelector('.m-ponto').value = m.ponto;
+                    last.querySelector('.m-ruido').value = m.ruido;
+                    last.querySelector('.m-temp').value = m.temp;
+                    last.querySelector('.m-ilum').value = m.ilum;
+                    last.querySelector('.m-umid').value = m.umid;
+                });
+
+                // Carrega cargos
+                const cContainer = document.getElementById('cargos-container');
+                cContainer.innerHTML = "";
+                sec.cargos.forEach(c => {
+                    addCargoRow();
+                    const rows = document.querySelectorAll('.cargo-row');
+                    const last = rows[rows.length - 1];
+                    last.querySelector('.c-nome').value = c.nome;
+                    last.querySelector('.c-qtd').value = c.qtd;
+                    last.querySelector('.c-ativ').value = c.atividades;
+                });
+
+                // Remove o setor antigo da lista para evitar duplicatas ao salvar novamente
+                appState.savedSectors = appState.savedSectors.filter(s => s.id !== id);
+                renderSavedSectorsList();
+                autoSave();
+                window.scrollTo({ top: document.querySelector('section:nth-of-type(3)').offsetTop - 70, behavior: 'smooth' });
+            }
+        }
+
+        // ==========================================
+        // PERSISTÊNCIA OFFLINE (LOCALSTORAGE)
+        // ==========================================
+        function autoSave() {
+            appState.solicitante = {
+                nome: document.getElementById('solicitante_nome').value,
+                cnpj: document.getElementById('solicitante_cnpj').value,
+                vigencia: document.getElementById('solicitante_vigencia').value,
+                data_emissao: document.getElementById('solicitante_data_emissao').value,
+                cnae: document.getElementById('solicitante_cnae').value,
+                endereco: document.getElementById('solicitante_endereco').value
+            };
+
+            appState.unidade = {
+                nome: document.getElementById('unidade_nome').value,
+                cnpj: document.getElementById('unidade_cnpj').value,
+                tel: document.getElementById('unidade_tel').value,
+                resp: document.getElementById('unidade_resp').value,
+                cargo_resp: document.getElementById('unidade_cargo_resp').value,
+                endereco: document.getElementById('unidade_endereco').value,
+                contato: document.getElementById('unidade_contato').value,
+                signature: canvas ? canvas.toDataURL() : ""
+            };
+
+            localStorage.setItem('BOREAL_PGR_OFFLINE_STATE', JSON.stringify(appState));
+        }
+
+        function loadStateFromStorage() {
+            const raw = localStorage.getItem('BOREAL_PGR_OFFLINE_STATE');
+            if (!raw) return;
+            try {
+                const loaded = JSON.parse(raw);
+                if (loaded) {
+                    appState = loaded;
+                    if (appState.solicitante) {
+                        document.getElementById('solicitante_nome').value = appState.solicitante.nome || "";
+                        document.getElementById('solicitante_cnpj').value = appState.solicitante.cnpj || "";
+                        document.getElementById('solicitante_vigencia').value = appState.solicitante.vigencia || "";
+                        document.getElementById('solicitante_data_emissao').value = appState.solicitante.data_emissao || "";
+                        document.getElementById('solicitante_cnae').value = appState.solicitante.cnae || "";
+                        document.getElementById('solicitante_endereco').value = appState.solicitante.endereco || "";
+                    }
+                    if (appState.unidade) {
+                        document.getElementById('unidade_nome').value = appState.unidade.nome || "";
+                        document.getElementById('unidade_cnpj').value = appState.unidade.cnpj || "";
+                        document.getElementById('unidade_tel').value = appState.unidade.tel || "";
+                        document.getElementById('unidade_resp').value = appState.unidade.resp || "";
+                        document.getElementById('unidade_cargo_resp').value = appState.unidade.cargo_resp || "";
+                        document.getElementById('unidade_endereco').value = appState.unidade.endereco || "";
+                        document.getElementById('unidade_contato').value = appState.unidade.contato || "";
+                        if (appState.unidade.signature && canvas) {
+                            const img = new Image();
+                            img.onload = () => ctx.drawImage(img, 0, 0);
+                            img.src = appState.unidade.signature;
+                        }
+                    }
+                    if (appState.savedSectors) {
+                        renderSavedSectorsList();
+                    }
+                    if (appState.responsavelHistory) {
+                        updateRespDropdown();
+                    }
+                }
+            } catch(e) {
+                console.error("Erro ao carregar rascunho local:", e);
+            }
+        }
+
+        // ==============================================================
+        // MODAL DE VISUALIZAÇÃO DAS MATRIZES
+        // ==============================================================
+        function openReviewModal() {
+            autoSave();
+            const container = document.getElementById('modal-tables-preview');
+            container.innerHTML = "";
+
+            // 1. TABELA DA CAPA
+            const capDiv = document.createElement('div');
+            capDiv.className = "border border-slate-300 rounded-lg p-3 bg-white space-y-2";
+            capDiv.innerHTML = `
+                <div class="font-bold text-slate-800 text-xs uppercase bg-slate-200 p-1.5 rounded">MATRIZ DA CAPA DO PGR</div>
+                <table class="table-pgr w-full border-collapse">
+                    <tr><td class="font-bold w-1/3">SOLICITANTE:</td><td>${appState.solicitante.nome || '-'}</td><td class="font-bold">CNPJ:</td><td>${appState.solicitante.cnpj || '-'}</td></tr>
+                    <tr><td class="font-bold">VIGÊNCIA:</td><td>${appState.solicitante.vigencia || '-'}</td><td class="font-bold">DATA DE EMISSÃO:</td><td>${appState.solicitante.data_emissao || '-'}</td></tr>
+                </table>
+            `;
+            container.appendChild(capDiv);
+
+            // 2. TABELA DO CAPÍTULO 1 (RELATÓRIO DE VISITA)
+            const cap1Div = document.createElement('div');
+            cap1Div.className = "border border-slate-300 rounded-lg p-3 bg-white space-y-2";
+            cap1Div.innerHTML = `
+                <div class="font-bold text-slate-800 text-xs uppercase bg-slate-200 p-1.5 rounded">MATRIZ DO CAPÍTULO 1 — RELATÓRIO DE VISITA (UNIDADE)</div>
+                <table class="table-pgr w-full border-collapse">
+                    <thead>
+                        <tr>
+                            <th>NOME DA UNIDADE</th>
+                            <th>CNPJ</th>
+                            <th>NOME DO RESPONSÁVEL</th>
+                            <th>CARGO DO RESPONSÁVEL</th>
+                            <th>ENDEREÇO</th>
+                            <th>NOME DO CONTATO E ASS.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>${appState.unidade.nome || '-'}</td>
+                            <td>${appState.unidade.cnpj || '-'}</td>
+                            <td>${appState.unidade.resp || '-'}</td>
+                            <td>${appState.unidade.cargo_resp || '-'}</td>
+                            <td>${appState.unidade.endereco || '-'}</td>
+                            <td>
+                                <div>${appState.unidade.contato || '-'}</div>
+                                ${appState.unidade.signature ? `<img src="${appState.unidade.signature}" style="max-height:40px; margin-top:4px;" alt="Assinatura">` : ''}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+            container.appendChild(cap1Div);
+
+            // 3. TABELAS DE CADA SETOR (CAPÍTULO 15)
+            if (appState.savedSectors.length === 0) {
+                const emptyNotice = document.createElement('div');
+                emptyNotice.className = "text-center text-amber-800 bg-amber-50 border border-amber-200 p-4 rounded-lg font-semibold";
+                emptyNotice.textContent = "Nenhum setor foi salvo ainda para exibição na Matriz do Capítulo 15.";
+                container.appendChild(emptyNotice);
+            } else {
+                appState.savedSectors.forEach((sec, sIdx) => {
+                    const secDiv = document.createElement('div');
+                    secDiv.className = "border-2 border-blue-200 rounded-lg p-3 bg-white space-y-3";
+                    
+                    // Constrói cargos
+                    let cargosRows = "";
+                    sec.cargos.forEach(c => {
+                        cargosRows += `<tr><td>${c.nome || '-'}</td><td class="text-center font-bold">${c.qtd || '1'}</td><td>${c.atividades || '-'}</td></tr>`;
+                    });
+
+                    // Constrói medições
+                    let medRows = "";
+                    sec.measurements.forEach(m => {
+                        medRows += `<tr><td>${m.ponto || 'Ponto Geral'}</td><td class="text-center">${m.ruido || '-'}</td><td class="text-center">${m.temp || '-'}</td><td class="text-center">${m.ilum || '-'}</td><td class="text-center">${m.umid || '-'}</td></tr>`;
+                    });
+
+                    // Constrói riscos e ações
+                    let riscosRows = "";
+                    let acoesRows = "";
+                    sec.riscos.forEach(r => {
+                        riscosRows += `
+                            <tr>
+                                <td>${r.perigo || '-'}</td>
+                                <td>${r.fonte || '-'}</td>
+                                <td>${r.risco || '-'}</td>
+                                <td>${r.propagacao || '-'}</td>
+                                <td>${r.lesoes || '-'}</td>
+                                <td>${r.medidas || '-'}</td>
+                                <td class="text-center font-bold">${r.prob || '-'}</td>
+                                <td class="text-center font-bold">${r.sev || '-'}</td>
+                                <td class="text-center font-black">${r.nivel || '-'}</td>
+                            </tr>
+                        `;
+                        acoesRows += `
+                            <tr>
+                                <td colspan="2">${r.acao || 'Manter medidas preventivas e monitoramento regular.'}</td>
+                                <td class="text-center font-bold">${r.prazo || 'Até 90 dias'}</td>
+                            </tr>
+                        `;
+                    });
+
+                    secDiv.innerHTML = `
+                        <div class="font-bold text-blue-900 text-xs uppercase bg-blue-100 p-2 rounded flex justify-between items-center">
+                            <span>MATRIZ CAPÍTULO 15 — SETOR #${sIdx + 1}: ${sec.nome}</span>
+                            <span class="text-[11px] text-blue-700">Processo: ${sec.processo || '-'}</span>
+                        </div>
+
+                        <!-- GHE e Medições -->
+                        <table class="table-pgr w-full border-collapse mb-2">
+                            <thead>
+                                <tr class="bg-slate-200">
+                                    <th colspan="2">GRUPO HOMOGÊNEO DE EXPOSIÇÃO</th>
+                                    <th colspan="4">MEDIÇÕES AMBIENTAIS</th>
+                                </tr>
+                                <tr>
+                                    <th>NOME DO SETOR OU UNIDADE</th>
+                                    <th>PROCESSO OPERACIONAL</th>
+                                    <th>RUÍDO (dB)</th>
+                                    <th>TEMP. (°C)</th>
+                                    <th>ILUM. (LUX)</th>
+                                    <th>UM. (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-bold">${sec.nome}</td>
+                                    <td>${sec.processo || '-'}</td>
+                                    <td class="text-center">${sec.measurements[0]?.ruido || '-'}</td>
+                                    <td class="text-center">${sec.measurements[0]?.temp || '-'}</td>
+                                    <td class="text-center">${sec.measurements[0]?.ilum || '-'}</td>
+                                    <td class="text-center">${sec.measurements[0]?.umid || '-'}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Tabela Cargos -->
+                        <div class="text-[11px] font-bold text-slate-700 uppercase mt-2">Cargos e Atividades:</div>
+                        <table class="table-pgr w-full border-collapse mb-2">
+                            <thead>
+                                <tr><th>CARGO</th><th style="width:70px;">QUANT.</th><th>ATIVIDADES</th></tr>
+                            </thead>
+                            <tbody>${cargosRows}</tbody>
+                        </table>
+
+                        <!-- Tabela Inventário de Riscos -->
+                        <div class="text-[11px] font-bold text-slate-700 uppercase mt-2">Inventário de Riscos Ocupacionais:</div>
+                        <table class="table-pgr w-full border-collapse mb-2">
+                            <thead>
+                                <tr>
+                                    <th>PERIGO</th>
+                                    <th>FONTE GERADORA</th>
+                                    <th>RISCO</th>
+                                    <th>VIA PROPAGAÇÃO</th>
+                                    <th>LESÕES / AGRAVOS</th>
+                                    <th>MEDIDAS EXISTENTES</th>
+                                    <th>PROB.</th>
+                                    <th>SEV.</th>
+                                    <th>NÍVEL</th>
+                                </tr>
+                            </thead>
+                            <tbody>${riscosRows || '<tr><td colspan="9" class="text-center">Nenhum risco registrado</td></tr>'}</tbody>
+                        </table>
+
+                        <!-- Tabela Plano de Ações -->
+                        <div class="text-[11px] font-bold text-slate-700 uppercase mt-2">Plano de Ações das Medidas de Prevenção:</div>
+                        <table class="table-pgr w-full border-collapse mb-2">
+                            <thead>
+                                <tr>
+                                    <th colspan="2">MEDIDA DE PREVENÇÃO / CORREÇÃO RECOMENDADA</th>
+                                    <th style="width:140px;">PRAZO PARA IMPLANTAÇÃO</th>
+                                </tr>
+                            </thead>
+                            <tbody>${acoesRows || '<tr><td colspan="3" class="text-center">Nenhuma ação necessária</td></tr>'}</tbody>
+                            <tfoot>
+                                <tr class="bg-slate-100">
+                                    <td colspan="3"><strong>RESPONSÁVEL PELA IMPLEMENTAÇÃO DO PLANO DE AÇÃO:</strong> ${sec.responsavel || 'A Definir pela Diretoria'}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    `;
+                    container.appendChild(secDiv);
+                });
+            }
+
+            document.getElementById('review-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeReviewModal() {
+            document.getElementById('review-modal').classList.add('hidden');
+        }
+
+        function copyModalContent() {
+            const range = document.createRange();
+            range.selectNode(document.getElementById('modal-tables-preview'));
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            try {
+                document.execCommand('copy');
+                alert("Tabelas copiadas com formatação para a área de transferência! Basta abrir seu documento Word e dar Ctrl+V.");
+            } catch (err) {
+                alert("Falha ao copiar automaticamente. Por favor, selecione as tabelas manualmente e aperte Ctrl+C.");
+            }
+            window.getSelection().removeAllRanges();
+        }
+
+        // ==============================================================
+        // GERAÇÃO COMPLETA DO ARQUIVO WORD (.DOCX) COM DOCX.JS (OFFLINE)
+        // ==============================================================
+        async function exportWordDocument() {
+            autoSave();
+            if (appState.savedSectors.length === 0) {
+                alert("Atenção: Adicione e salve ao menos 1 setor antes de gerar o documento.");
+                return;
+            }
+
+            const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, HeadingLevel, AlignmentType, WidthType, BorderStyle, ShadingType } = docx;
+
+            const tableBorder = {
+                top: { style: BorderStyle.SINGLE, size: 4, color: "334155" },
+                bottom: { style: BorderStyle.SINGLE, size: 4, color: "334155" },
+                left: { style: BorderStyle.SINGLE, size: 4, color: "334155" },
+                right: { style: BorderStyle.SINGLE, size: 4, color: "334155" },
+            };
+
+            const headerShading = { fill: "E2E8F0", type: ShadingType.CLEAR };
+            const subShading = { fill: "F1F5F9", type: ShadingType.CLEAR };
+
+            const docChildren = [];
+
+            // TÍTULO DO ARQUIVO
+            docChildren.push(
+                new Paragraph({
+                    text: "MATRIZES DE RISCO DO PGR — NR 01",
+                    heading: HeadingLevel.HEADING_1,
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 200 }
+                }),
+                new Paragraph({
+                    text: "BOREAL ENGMED — COLETADAS EM CAMPO",
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 300 }
+                })
+            );
+
+            // 1. MATRIZ DA CAPA
+            docChildren.push(
+                new Paragraph({
+                    children: [new TextRun({ text: "1. MATRIZ INSERIDA NA CAPA DO PGR", bold: true, size: 22 })],
+                    spacing: { before: 200, after: 100 }
+                }),
+                new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    borders: tableBorder,
+                    rows: [
+                        new TableRow({
+                            children: [
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "SOLICITANTE:", bold: true })] })], shading: headerShading, width: { size: 25, type: WidthType.PERCENTAGE } }),
+                                new TableCell({ children: [new Paragraph(appState.solicitante.nome || "-")], width: { size: 40, type: WidthType.PERCENTAGE } }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "CNPJ:", bold: true })] })], shading: headerShading, width: { size: 15, type: WidthType.PERCENTAGE } }),
+                                new TableCell({ children: [new Paragraph(appState.solicitante.cnpj || "-")], width: { size: 20, type: WidthType.PERCENTAGE } }),
+                            ]
+                        }),
+                        new TableRow({
+                            children: [
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "VIGÊNCIA:", bold: true })] })], shading: headerShading }),
+                                new TableCell({ children: [new Paragraph(appState.solicitante.vigencia || "-")] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "DATA DE EMISSÃO:", bold: true })] })], shading: headerShading }),
+                                new TableCell({ children: [new Paragraph(appState.solicitante.data_emissao || "-")] }),
+                            ]
+                        })
+                    ]
+                }),
+                new Paragraph({ text: "", spacing: { after: 300 } })
+            );
+
+            // 2. MATRIZ DO CAPÍTULO 1
+            docChildren.push(
+                new Paragraph({
+                    children: [new TextRun({ text: "2. MATRIZ INSERIDA NO CAPÍTULO 1 (RELATÓRIO DE VISITA DA UNIDADE)", bold: true, size: 22 })],
+                    spacing: { before: 200, after: 100 }
+                }),
+                new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    borders: tableBorder,
+                    rows: [
+                        new TableRow({
+                            children: [
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NOME DA UNIDADE", bold: true, size: 18 })] })], shading: headerShading }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "CNPJ", bold: true, size: 18 })] })], shading: headerShading }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NOME DO RESPONSÁVEL", bold: true, size: 18 })] })], shading: headerShading }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "CARGO", bold: true, size: 18 })] })], shading: headerShading }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ENDEREÇO", bold: true, size: 18 })] })], shading: headerShading }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "CONTATO E ASS.", bold: true, size: 18 })] })], shading: headerShading }),
+                            ]
+                        }),
+                        new TableRow({
+                            children: [
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: appState.unidade.nome || "-", size: 18 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: appState.unidade.cnpj || "-", size: 18 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: appState.unidade.resp || "-", size: 18 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: appState.unidade.cargo_resp || "-", size: 18 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: appState.unidade.endereco || "-", size: 18 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: appState.unidade.contato || "-", size: 18 })] })] }),
+                            ]
+                        })
+                    ]
+                }),
+                new Paragraph({ text: "", spacing: { after: 300 } })
+            );
+
+            // 3. MATRIZES DO CAPÍTULO 15 (POR SETOR)
+            appState.savedSectors.forEach((sec, idx) => {
+                docChildren.push(
+                    new Paragraph({
+                        children: [new TextRun({ text: `3.${idx + 1} MATRIZ DO SETOR: ${sec.nome.toUpperCase()}`, bold: true, size: 22 })],
+                        spacing: { before: 200, after: 100 }
+                    })
+                );
+
+                // Linhas dos Cargos
+                const cargoTableRows = [
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "CARGO", bold: true, size: 18 })] })], shading: headerShading, width: { size: 30, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "QUANT.", bold: true, size: 18 })] })], shading: headerShading, width: { size: 10, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ATIVIDADES", bold: true, size: 18 })] })], shading: headerShading, width: { size: 60, type: WidthType.PERCENTAGE } }),
+                        ]
+                    })
+                ];
+                sec.cargos.forEach(c => {
+                    cargoTableRows.push(
+                        new TableRow({
+                            children: [
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: c.nome || "-", size: 18 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: String(c.qtd || "1"), size: 18 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: c.atividades || "-", size: 18 })] })] }),
+                            ]
+                        })
+                    );
+                });
+
+                // Linhas do Inventário de Riscos
+                const riscoTableRows = [
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "PERIGO", bold: true, size: 16 })] })], shading: headerShading }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "FONTE GERADORA", bold: true, size: 16 })] })], shading: headerShading }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "RISCO", bold: true, size: 16 })] })], shading: headerShading }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "VIA PROPAG.", bold: true, size: 16 })] })], shading: headerShading }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "LESÕES/AGRAVOS", bold: true, size: 16 })] })], shading: headerShading }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "MEDIDAS EXISTENTES", bold: true, size: 16 })] })], shading: headerShading }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "PROB.", bold: true, size: 16 })] })], shading: headerShading }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "SEV.", bold: true, size: 16 })] })], shading: headerShading }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NÍVEL", bold: true, size: 16 })] })], shading: headerShading }),
+                        ]
+                    })
+                ];
+                sec.riscos.forEach(r => {
+                    riscoTableRows.push(
+                        new TableRow({
+                            children: [
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: r.perigo || "-", size: 16 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: r.fonte || "-", size: 16 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: r.risco || "-", size: 16 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: r.propagacao || "-", size: 16 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: r.lesoes || "-", size: 16 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: r.medidas || "-", size: 16 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: String(r.prob || "-"), size: 16, bold: true })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: String(r.sev || "-"), size: 16, bold: true })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: String(r.nivel || "-"), size: 16, bold: true })] })] }),
+                            ]
+                        })
+                    );
+                });
+
+                // Linhas do Plano de Ações
+                const acaoTableRows = [
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "PLANO DE AÇÃO DAS MEDIDAS DE PREVENÇÃO OU CORREÇÃO", bold: true, size: 18 })] })], shading: headerShading, width: { size: 75, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "PRAZO IMPLANTAÇÃO", bold: true, size: 18 })] })], shading: headerShading, width: { size: 25, type: WidthType.PERCENTAGE } }),
+                        ]
+                    })
+                ];
+                sec.riscos.forEach(r => {
+                    acaoTableRows.push(
+                        new TableRow({
+                            children: [
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: r.acao || "Manter medidas e treinamentos.", size: 18 })] })] }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: r.prazo || "Até 90 dias", size: 18 })] })] }),
+                            ]
+                        })
+                    );
+                });
+
+                // Adiciona responsável
+                acaoTableRows.push(
+                    new TableRow({
+                        children: [
+                            new TableCell({
+                                children: [new Paragraph({ children: [new TextRun({ text: "RESPONSÁVEL PELA IMPLEMENTAÇÃO DO PLANO DE AÇÃO: ", bold: true, size: 18 }), new TextRun({ text: sec.responsavel || "A Definir", size: 18 })] })],
+                                columnSpan: 2,
+                                shading: subShading
+                            })
+                        ]
+                    })
+                );
+
+                // Insere tabelas no documento
+                docChildren.push(
+                    // GHE e Medições
+                    new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        borders: tableBorder,
+                        rows: [
+                            new TableRow({
+                                children: [
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "GRUPO HOMOGÊNEO DE EXPOSIÇÃO", bold: true, size: 18 })] })], columnSpan: 2, shading: headerShading }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "MEDIÇÕES AMBIENTAIS", bold: true, size: 18 })] })], columnSpan: 4, shading: headerShading }),
+                                ]
+                            }),
+                            new TableRow({
+                                children: [
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NOME DO SETOR OU UNIDADE", bold: true, size: 16 })] })], shading: subShading }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "PROCESSO OPERACIONAL", bold: true, size: 16 })] })], shading: subShading }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "RUÍDO (dB)", bold: true, size: 16 })] })], shading: subShading }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "TEMP. (°C)", bold: true, size: 16 })] })], shading: subShading }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ILUM.(LUX)", bold: true, size: 16 })] })], shading: subShading }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "UM. (%)", bold: true, size: 16 })] })], shading: subShading }),
+                                ]
+                            }),
+                            new TableRow({
+                                children: [
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: sec.nome, size: 16, bold: true })] })] }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: sec.processo || "-", size: 16 })] })] }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: sec.measurements[0]?.ruido || "-", size: 16 })] })] }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: sec.measurements[0]?.temp || "-", size: 16 })] })] }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: sec.measurements[0]?.ilum || "-", size: 16 })] })] }),
+                                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: sec.measurements[0]?.umid || "-", size: 16 })] })] }),
+                                ]
+                            })
+                        ]
+                    }),
+                    new Paragraph({ text: "", spacing: { after: 150 } }),
+                    new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: tableBorder, rows: cargoTableRows }),
+                    new Paragraph({ text: "", spacing: { after: 150 } }),
+                    new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: tableBorder, rows: riscoTableRows }),
+                    new Paragraph({ text: "", spacing: { after: 150 } }),
+                    new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: tableBorder, rows: acaoTableRows }),
+                    new Paragraph({ text: "", spacing: { after: 350 } })
+                );
+            });
+
+            // CRIAÇÃO E DOWNLOAD DO ARQUIVO DOCX
+            const doc = new Document({
+                sections: [{
+                    properties: {},
+                    children: docChildren
+                }]
+            });
+
+            const blob = await Packer.toBlob(doc);
+            const clientName = (appState.solicitante.nome || "BOREAL").replace(/[^a-zA-Z0-9]/g, "_");
+            saveAs(blob, `MATRIZES_PGR_${clientName}.docx`);
+        }
+    </script>
+</body>
+</html>
